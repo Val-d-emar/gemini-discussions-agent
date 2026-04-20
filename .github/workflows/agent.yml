@@ -8,8 +8,7 @@ jobs:
     if: contains(github.event.comment.body, '@ai-agent-net')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: ./path-to-your-action # или репозиторий: username/repo@main
+      - uses: Val-d-emar/gemini-discussion-agent@main
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           # github_token: ${{ secrets.GITHUB_TOKEN }}
