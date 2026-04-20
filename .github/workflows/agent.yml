@@ -8,7 +8,6 @@ permissions:
 
 jobs:
   gemini_respond:
-    # Запускать только если в комментарии есть тег @gemini или другой триггер
     if: contains(github.event.comment.body, '@ai-agent-net')
     runs-on: ubuntu-latest
     steps:
