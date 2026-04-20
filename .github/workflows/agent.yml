@@ -11,9 +11,20 @@ jobs:
     if: contains(github.event.comment.body, '@ai-agent-net')
     runs-on: ubuntu-latest
     steps:
+      - name: Extract Model Tag
+        id: extract_model
+        shell: bash
+        run: |
+          # Извлекаем первую строку и ищем тег @model с названием модели
+          MODEL=$(echo "$COMMENT_BODY" | head -n 1 | grep -oP '@model\s+\K[a-zA-Z0-9.-]+' || echo "auto")
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+
       - uses: Val-d-emar/gemini-discussions-agent@main
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           github_token: ${{ secrets.AI_TOKEN_PAT }}
           agent_prompt: "Проанализируй текущий вопрос пользователя в контексте всего обсуждения и дай аргументированный ответ."
           agent_language: "Russian"
+          agent_model: ${{ steps.extract_model.outputs.model }}

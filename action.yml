@@ -26,7 +26,7 @@ inputs:
     description: "Language for the response"
     required: false
     default: "English"
-  agent-model:
+  agent_model:
     description: "Model for the AI agent (pro, flash, flash-lite, auto)"
     required: false
     default: "auto"

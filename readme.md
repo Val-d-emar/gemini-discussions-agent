@@ -15,7 +15,8 @@ This repository contains a **GitHub Action** that leverages the power of Gemini 
 - **Context Analysis:** Reads the discussion title, original post (OP), and all subsequent comments.
 - **Gemini Integration:** Uses `gemini-cli` to interact with the Google AI API.
 - **Flexible Configuration:** Ability to set a specific system prompt and response language.
-- **Automation:** Triggered when the agent is mentioned (e.g., `@ai-agent`) in comments.
+- **Automation:** Triggered when the agent is mentioned (e.g., `@ai-agent-net`) in comments.
+- **Model Selection:** Supports selecting a specific model via the `@model` tag in the comment.
 
 ## 🚀 Quick Start
 
@@ -24,18 +25,28 @@ To use this action in your repository, create a `.github/workflows/agent.yml` fi
 ```yaml
 on:
   discussion_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
-  ai_reply:
+  gemini_respond:
     if: contains(github.event.comment.body, '@ai-agent')
     runs-on: ubuntu-latest
     steps:
+      - name: Extract Model Tag
+        id: extract_model
+        shell: bash
+        run: |
+          MODEL=$(echo "$COMMENT_BODY" | head -n 1 | grep -oP '@model\s+\K[a-zA-Z0-9.-]+' || echo "auto")
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+
       - uses: Val-d-emar/gemini-discussions-agent@v1
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           agent_prompt: "Analyze the discussion and provide a technically accurate response."
           agent_language: "English"
+          agent_model: ${{ steps.extract_model.outputs.model }}
 ```
 
 ## ⚙️ Parameters (Inputs)
@@ -46,6 +57,7 @@ jobs:
 | `github_token`   | GitHub API token (needed for posting comments). |    No    | `${{ github.token }}`            |
 | `agent_prompt`   | Instructions for the AI agent.                  |    No    | (see action.yml)                   |
 | `agent_language` | The language in which the agent will respond.   |    No    | `English`                        |
+| `agent_model`    | Model for the AI agent (pro, flash, auto, etc.) |    No    | `auto`                           |
 | `comment_title`  | Header added to the generated response.         |    No    | `### 🤖 Gemini Discussion Agent` |
 
 ## 🛠 How It Works
@@ -62,20 +74,6 @@ This project is licensed under the[GNU General Public License v3.0 (GPL-3.0)](LI
 
 ---
 
-### 🤖 Gemini Discussion Agent
-
-I will read the `discussion_context.txt` file to understand the context of the discussion and the user's question.
-
-I will read the `action.yml` file to understand the functionality of the repository, which will help me create an accurate and reasoned answer for the README.
-
-I will read the `.github/workflows/agent.yml` file to understand the workflow triggers and then proceed to generate the README content in Russian.
-
-Проанализировав контекст обсуждения, становится очевидно, что пользователь **Val-d-emar** ожидает выполнения первоначального запроса — создания файла `readme.md` для репозитория `Val-d-emar/gemini-discussions-agent`. Серия уточняющих вопросов («ты почему молчишь?», «жду ответа», «ну?») вызвана задержкой в реакции агента и желанием получить результат.
-
-Ниже представлен аргументированный ответ, содержащий качественную документацию для данного проекта на основе анализа его структуры и файлов (`action.yml`, `.github/workflows/agent.yml`).
-
----
-
 <a name="русский"></a>
 
 ## 🇷🇺 Русский
@@ -84,10 +82,11 @@ I will read the `.github/workflows/agent.yml` file to understand the workflow tr
 
 ## ✨ Особенности
 
-- **Анализ контекста:** Считывает заголовок обсуждения, первое сообщение (OP) и все последующие комментарии.
+- **Анализ контекста:** Считывает заголовок обсуждения, сообщение (OP) и все комментарии.
 - **Интеграция с Gemini:** Использует `gemini-cli` для взаимодействия с API Google.
-- **Гибкая настройка:** Возможность задать специфический системный промпт и язык ответа.
-- **Автоматизация:** Триггерится при упоминании агента (например, `@ai-agent`) в комментариях.
+- **Гибкая настройка:** Возможность задать системный промпт и язык ответа.
+- **Автоматизация:** Триггерится при упоминании агента (например, `@ai-agent-net`) в комментариях.
+- **Выбор модели:** Поддержка выбора конкретной модели через тег `@model` в тексте комментария.
 
 ## 🚀 Быстрый старт
 
@@ -96,18 +95,29 @@ I will read the `.github/workflows/agent.yml` file to understand the workflow tr
 ```yaml
 on:
   discussion_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
-  ai_reply:
+  gemini_respond:
     if: contains(github.event.comment.body, '@ai-agent')
     runs-on: ubuntu-latest
     steps:
+      - name: Extract Model Tag
+        id: extract_model
+        shell: bash
+        run: |
+          MODEL=$(echo "$COMMENT_BODY" | head -n 1 | grep -oP '@model\s+\K[a-zA-Z0-9.-]+' || echo "auto")
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+
       - uses: Val-d-emar/gemini-discussions-agent@v1
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          agent_prompt: "Проанализируй обсуждение и дай технически точный ответ."
+          github_token: ${{ secrets.AI_TOKEN_PAT }}
+          agent_prompt: "Проанализируй текущий вопрос пользователя в контексте всего обсуждения и дай аргументированный ответ."
           agent_language: "Russian"
+          agent_model: ${{ steps.extract_model.outputs.model }}
 ```
 
 ## ⚙️ Параметры (Inputs)
@@ -118,6 +128,7 @@ jobs:
 | `github_token`   | Токен для доступа к API GitHub (нужен для записи). |         Нет         | `${{ github.token }}`            |
 | `agent_prompt`   | Инструкции для ИИ-агента.                                   |         Нет         | (см. action.yml)                 |
 | `agent_language` | Язык, на котором агент будет отвечать.            |         Нет         | `English`                        |
+| `agent_model`    | Модель для использования (pro, flash, auto и т.д.) |         Нет         | `auto`                           |
 | `comment_title`  | Заголовок, который будет добавлен к ответу.  |         Нет         | `### 🤖 Gemini Discussion Agent` |
 
 ## 🛠 Как это работает
