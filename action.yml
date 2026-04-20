@@ -1,0 +1,119 @@
+name: "Gemini Discussion Agent"
+description: "AI agent for analyzing and responding to GitHub Discussions"
+author: "Val-d-emar"
+
+branding:
+  icon: "message-square"
+  color: "blue"
+
+inputs:
+  gemini_api_key:
+    description: "API Key for Gemini"
+    required: true
+  github_token:
+    description: "GitHub Token with discussion:write scope"
+    required: false
+    default: ${{ github.token }}
+  agent_prompt:
+    description: "Instructions for the AI agent"
+    required: false
+    default: >
+      You are a helpful technical assistant.
+      Analyze the provided discussion context (Original Post and all comments).
+      Answer the user's specific question or provide a critique if requested.
+      Be concise and factual.
+  agent_language:
+    description: "Language for the response"
+    required: false
+    default: "Russian"
+  comment_title:
+    description: "Title to prepend to the response"
+    required: false
+    default: "### 🤖 Gemini Discussion Agent"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: "24"
+
+    - name: Install Gemini CLI
+      run: npm install -g @google/gemini-cli
+      shell: bash
+
+    - name: Fetch Discussion Context
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      shell: bash
+      run: |
+        # Используем данные из события (поддерживает и создание топика, и комментарии)
+        REPO_OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
+        REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+
+        # Определяем номер обсуждения
+        if [ "${{ github.event_name }}" == "discussion_comment" ]; then
+          D_NUM=${{ github.event.discussion.number }}
+        else
+          D_NUM=${{ github.event.discussion.number }}
+        fi
+
+        gh api graphql -f query='
+        query($owner: String!, $repo: String!, $num: Int!) {
+          repository(owner: $owner, name: $repo) {
+            discussion(number: $num) {
+              id
+              title
+              body
+              comments(first: 100) {
+                nodes {
+                  author { login }
+                  body
+                  replies(first: 50) {
+                    nodes {
+                      author { login }
+                      body
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }' -f owner="$REPO_OWNER" -f repo="$REPO_NAME" -F num=$D_NUM > raw_data.json
+
+        # Извлекаем ID для ответа
+        echo "DISCUSSION_ID=$(jq -r '.data.repository.discussion.id' raw_data.json)" >> $GITHUB_ENV
+
+    - name: Prepare Context and Run Gemini
+      env:
+        GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
+        USER_PROMPT: ${{ inputs.agent_prompt }}
+        USER_LANG: ${{ inputs.agent_language }}
+      shell: bash
+      run: |
+        # Форматируем контекст для LLM
+        echo "TOPIC: $(jq -r '.data.repository.discussion.title' raw_data.json)" > discussion_context.txt
+        echo "OP: $(jq -r '.data.repository.discussion.body' raw_data.json)" >> discussion_context.txt
+        echo -e "\n--- CONVERSATION ---" >> discussion_context.txt
+        jq -r '.data.repository.discussion.comments.nodes[] | "USER \(.author.login): \(.body) " + ([.replies.nodes[] | "REPLY \(.author.login): \(.body)"] | join(" "))' raw_data.json >> discussion_context.txt
+
+        FULL_PROMPT="Use ${USER_LANG} language for answer. ${USER_PROMPT}"
+
+        gemini prompt "$FULL_PROMPT" discussion_context.txt > raw_answer.md
+
+    - name: Post Comment
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      shell: bash
+      run: |
+        printf "%s\n\n" "${{ inputs.comment_title }}" > final_body.md
+        cat raw_answer.md >> final_body.md
+
+        # Отправка через GraphQL (обязательно для Discussions)
+        gh api graphql -f query='
+        mutation($id: ID!, $body: String!) {
+          addDiscussionComment(input: {discussionId: $id, body: $body}) {
+            comment { url }
+          }
+        }' -f id="${{ env.DISCUSSION_ID }}" -f body="$(cat final_body.md)"
