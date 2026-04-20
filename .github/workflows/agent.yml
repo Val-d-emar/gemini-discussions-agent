@@ -1,7 +1,9 @@
 on:
   discussion_comment:
     types: [created, edited]
-
+  discussion:
+    types: [created]
+    
 permissions:
   discussions: write
   contents: read

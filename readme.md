@@ -26,6 +26,11 @@ To use this action in your repository, create a `.github/workflows/agent.yml` fi
 on:
   discussion_comment:
     types: [created, edited]
+  discussion:
+    types: [created]
+permissions:
+  discussions: write
+  contents: read
 
 jobs:
   gemini_respond:
@@ -96,6 +101,11 @@ This project is licensed under the[GNU General Public License v3.0 (GPL-3.0)](LI
 on:
   discussion_comment:
     types: [created, edited]
+  discussion:
+    types: [created]
+permissions:
+  discussions: write
+  contents: read
 
 jobs:
   gemini_respond:
