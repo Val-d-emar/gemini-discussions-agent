@@ -15,6 +15,6 @@ jobs:
       - uses: Val-d-emar/gemini-discussions-agent@main
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          # github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.AI_TOKEN_PAT }}
           agent_prompt: "Проанализируй текущий вопрос пользователя в контексте всего обсуждения и дай аргументированный ответ."
           agent_language: "Russian"
