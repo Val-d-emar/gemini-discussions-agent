@@ -4,7 +4,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-`<a name="english"></a>`
+<a name="english"></a>
 
 ## 🇬🇧 English
 
@@ -76,7 +76,7 @@ I will read the `.github/workflows/agent.yml` file to understand the workflow tr
 
 ---
 
-`<a name="русский"></a>`
+<a name="русский"></a>
 
 ## 🇷🇺 Русский
 
