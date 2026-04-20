@@ -29,7 +29,7 @@ inputs:
   agent_model:
     description: "Model for the AI agent (pro, flash, flash-lite, auto)"
     required: false
-    default: "auto"
+    default: "flash"
   comment_title:
     description: "Title to prepend to the response"
     required: false

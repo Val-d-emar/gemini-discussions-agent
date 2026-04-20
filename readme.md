@@ -4,7 +4,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-<a name="english"></a>
+`<a name="english"></a>`
 
 ## 🇬🇧 English
 
@@ -57,7 +57,7 @@ jobs:
 | `github_token`   | GitHub API token (needed for posting comments). |    No    | `${{ github.token }}`            |
 | `agent_prompt`   | Instructions for the AI agent.                  |    No    | (see action.yml)                   |
 | `agent_language` | The language in which the agent will respond.   |    No    | `English`                        |
-| `agent_model`    | Model for the AI agent (pro, flash, auto, etc.) |    No    | `auto`                           |
+| `agent_model`    | Model for the AI agent (pro, flash, auto, etc.) |    No    | flash                              |
 | `comment_title`  | Header added to the generated response.         |    No    | `### 🤖 Gemini Discussion Agent` |
 
 ## 🛠 How It Works
@@ -74,7 +74,7 @@ This project is licensed under the[GNU General Public License v3.0 (GPL-3.0)](LI
 
 ---
 
-<a name="русский"></a>
+`<a name="русский"></a>`
 
 ## 🇷🇺 Русский
 
@@ -128,7 +128,7 @@ jobs:
 | `github_token`   | Токен для доступа к API GitHub (нужен для записи). |         Нет         | `${{ github.token }}`            |
 | `agent_prompt`   | Инструкции для ИИ-агента.                                   |         Нет         | (см. action.yml)                 |
 | `agent_language` | Язык, на котором агент будет отвечать.            |         Нет         | `English`                        |
-| `agent_model`    | Модель для использования (pro, flash, auto и т.д.) |         Нет         | `auto`                           |
+| `agent_model`    | Модель для использования (pro, flash, auto и т.д.)      |         Нет         | flash                              |
 | `comment_title`  | Заголовок, который будет добавлен к ответу.  |         Нет         | `### 🤖 Gemini Discussion Agent` |
 
 ## 🛠 Как это работает
