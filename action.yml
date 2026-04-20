@@ -25,7 +25,7 @@ inputs:
   agent_language:
     description: "Language for the response"
     required: false
-    default: "Russian"
+    default: "English"
   comment_title:
     description: "Title to prepend to the response"
     required: false
