@@ -1,6 +1,6 @@
 on:
   discussion_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
   gemini_respond:
