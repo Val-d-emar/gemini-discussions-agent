@@ -2,6 +2,10 @@ on:
   discussion_comment:
     types: [created]
 
+permissions:
+  discussions: write
+  contents: read
+  
 jobs:
   gemini_respond:
     # Запускать только если в комментарии есть тег @gemini или другой триггер
