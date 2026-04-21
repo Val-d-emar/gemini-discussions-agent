@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-04-21
 
 ### Added
+- **API Key Rotation:** Support for multiple API keys (comma-separated) to bypass Free Tier rate limits. The action automatically switches to the next key upon detecting a quota error.
+- **Quota Optimization (Eco-mode):** Implemented `--system-instruction` to guide the model more efficiently and explicitly instructed it to avoid unnecessary tool calls, saving API quota.
 - **Collapsible Error Logs:** When the agent fails, it now posts a detailed error report in the discussion thread with technical logs hidden under a `<details>` spoiler.
 - **Automated Tool Permissions:** Added automatic creation of `.gemini/settings.json` to grant the agent necessary permissions (e.g., `run_shell_command`) in GitHub Actions environments.
 - **Approval Mode:** Enabled `--approval-mode=yolo` for seamless non-interactive execution of AI-suggested commands.
