@@ -124,6 +124,7 @@ runs:
     - name: Prepare Context and Run Gemini
       env:
         GEMINI_API_KEYS: ${{ inputs.gemini_api_key }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
         USER_PROMPT: ${{ inputs.agent_prompt }}
         USER_LANG: ${{ inputs.agent_language }}
         GEMINI_MODEL: ${{ steps.extract_model.outputs.model }}
@@ -131,7 +132,13 @@ runs:
       run: |
         set +e
         mkdir -p .gemini
-        # Включаем инструменты для полноценной работы
+        
+        # Настраиваем Git, чтобы агент мог коммитить и пушить
+        git config --global user.name "gemini-discussion-agent"
+        git config --global user.email "actions@github.com"
+        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+        # Включаем инструменты
         echo '{"tools": {"core": ["run_shell_command", "write_file", "read_file", "glob", "grep_search"]}}' > .gemini/settings.json
 
         if ! jq -r '.data.repository.discussion.title' raw_data.json > /dev/null 2>&1; then
@@ -140,21 +147,21 @@ runs:
            exit 0
         fi
 
-        # Генерируем карту проекта (Project Map) для экономии квот на разведку
+        # Генерируем карту проекта
         echo "--- PROJECT STRUCTURE ---" > project_map.txt
         find . -maxdepth 3 -not -path '*/.*' -not -path './node_modules*' >> project_map.txt
 
-        # Подготовка контекста обсуждения
+        # Подготовка контекста
         echo "TOPIC: $(jq -r '.data.repository.discussion.title' raw_data.json)" > discussion_context.txt
         echo "OP: $(jq -r '.data.repository.discussion.body' raw_data.json)" >> discussion_context.txt
         echo -e "\n--- CONVERSATION ---" >> discussion_context.txt
         jq -r '.data.repository.discussion.comments.nodes[] | "USER \(.author.login): \(.body) " + ([.replies.nodes[] | "REPLY \(.author.login): \(.body)"] | join(" "))' raw_data.json >> discussion_context.txt
 
-        # Разделяем ключи (поддержка ротации)
+        # Разделяем ключи
         IFS=',' read -ra KEYS <<< "$GEMINI_API_KEYS"
         
-        # Инструкция с картой проекта
-        SYSTEM_PREFIX="[SYSTEM: Tech Assistant. Answer in ${USER_LANG}. Use Project Map to locate files. Use tools ONLY for changes/analysis. Minimize turns.]"
+        # Инструкция: разрешаем использование gh CLI
+        SYSTEM_PREFIX="[SYSTEM: Tech Assistant. Answer in ${USER_LANG}. You CAN use 'gh' CLI for PRs, Issues and 'git' for commits/pushes. Use Project Map. Minimize turns.]"
         FINAL_PROMPT="${SYSTEM_PREFIX}\n\nPROJECT MAP:\n$(cat project_map.txt)\n\nUSER PROMPT: ${USER_PROMPT}\n\nContext: @discussion_context.txt"
 
         SUCCESS=false
@@ -162,7 +169,6 @@ runs:
           KEY_TRIMMED=$(echo $KEY | xargs)
           echo "Attempting with API Key (prefix: ${KEY_TRIMMED:0:4}...)"
           
-          # Запуск Gemini
           if GEMINI_API_KEY=$KEY_TRIMMED gemini -m "$GEMINI_MODEL" \
             --approval-mode=yolo \
             -p "$FINAL_PROMPT" > raw_answer.md 2> error.log; then
