@@ -125,6 +125,7 @@ runs:
       env:
         GEMINI_API_KEYS: ${{ inputs.gemini_api_key }}
         GITHUB_TOKEN: ${{ inputs.github_token }}
+        GH_TOKEN: ${{ inputs.github_token }}
         USER_PROMPT: ${{ inputs.agent_prompt }}
         USER_LANG: ${{ inputs.agent_language }}
         GEMINI_MODEL: ${{ steps.extract_model.outputs.model }}
@@ -133,10 +134,15 @@ runs:
         set +e
         mkdir -p .gemini
         
-        # Настраиваем Git, чтобы агент мог коммитить и пушить
+        # Настраиваем Git и GitHub CLI для авторизации
         git config --global user.name "gemini-discussion-agent"
         git config --global user.email "actions@github.com"
         git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+        
+        # Настройка gh CLI (использует GH_TOKEN из env)
+        if command -v gh >/dev/null 2>&1; then
+          gh auth setup-git
+        fi
 
         # Включаем инструменты
         echo '{"tools": {"core": ["run_shell_command", "write_file", "read_file", "glob", "grep_search"]}}' > .gemini/settings.json
