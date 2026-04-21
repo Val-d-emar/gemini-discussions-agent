@@ -192,6 +192,8 @@ runs:
             cat error.log
             echo "\`\`\`"
             echo "</details>"
+            echo ""
+            echo "🔗 [Открыть логи GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
           } > raw_answer.md
         fi
 
