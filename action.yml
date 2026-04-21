@@ -143,20 +143,25 @@ runs:
       run: |
         set +e
         mkdir -p .gemini
-        export GITHUB_TOKEN=$GITHUB_TOKEN
-        export GH_TOKEN=$GH_TOKEN
         
         # Настраиваем Git и GitHub CLI для авторизации
         git config --global user.name "$GITHUB_NAME"
         git config --global user.email "$GITHUB_EMAIL"
-        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+        #git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
         
-        # Настройка gh CLI (использует GH_TOKEN из env)
+        # Настройка gh CLI (жесткая прописка конфига)
         if command -v gh >/dev/null 2>&1; then
-          echo "$GH_TOKEN" | gh auth login --with-token
+          mkdir -p ~/.config/gh
+          echo "github.com:" > ~/.config/gh/hosts.yml
+          echo "    oauth_token: $GH_TOKEN" >> ~/.config/gh/hosts.yml
+          echo "    git_protocol: https" >> ~/.config/gh/hosts.yml
           gh auth setup-git
           gh config set prompt disabled
         fi
+        
+        # Создаем .env для проброса в инструменты агента
+        echo "GH_TOKEN=$GH_TOKEN" > .env
+        echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> .env
 
         # Включаем инструменты
         echo '{"tools": {"core": ["run_shell_command", "write_file", "read_file", "glob", "grep_search"]}}' > .gemini/settings.json
