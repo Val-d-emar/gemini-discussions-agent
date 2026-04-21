@@ -91,7 +91,9 @@ This project is licensed under the[GNU General Public License v3.0 (GPL-3.0)](LI
 - **Интеграция с Gemini:** Использует `gemini-cli` для взаимодействия с API Google.
 - **Гибкая настройка:** Возможность задать системный промпт и язык ответа.
 - **Автоматизация:** Триггерится при упоминании агента (например, `@ai-agent-net`) в комментариях.
-- **Выбор модели:** Поддержка выбора конкретной модели через тег `@model` в тексте комментария.
+- **Выбор модели:** Поддержка выбора модели через тег `@model` (например, `@ai-agent-net @model flash-lite ...`).
+- **Обработка ошибок:** При возникновении ошибок (лимиты API или сбои инструментов) в обсуждение автоматически публикуется отчет с техническими логами под спойлером.
+- **Авто-разрешения:** Автоматическая настройка окружения для разрешения системных инструментов (например, `run_shell_command`) для ИИ-агента.
 
 ## 🚀 Быстрый старт
 
@@ -103,6 +105,7 @@ on:
     types: [created, edited]
   discussion:
     types: [created]
+
 permissions:
   discussions: write
   contents: read
@@ -112,22 +115,12 @@ jobs:
     if: contains(github.event.comment.body, '@ai-agent')
     runs-on: ubuntu-latest
     steps:
-      - name: Extract Model Tag
-        id: extract_model
-        shell: bash
-        run: |
-          MODEL=$(echo "$COMMENT_BODY" | head -n 1 | grep -oP '@model\s+\K[a-zA-Z0-9.-]+' || echo "auto")
-          echo "model=$MODEL" >> $GITHUB_OUTPUT
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-
-      - uses: Val-d-emar/gemini-discussions-agent@v1
+      - uses: Val-d-emar/gemini-discussions-agent@main
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          github_token: ${{ secrets.AI_TOKEN_PAT }}
           agent_prompt: "Проанализируй текущий вопрос пользователя в контексте всего обсуждения и дай аргументированный ответ."
           agent_language: "Russian"
-          agent_model: ${{ steps.extract_model.outputs.model }}
+          agent_model: "flash"
 ```
 
 ## ⚙️ Параметры (Inputs)
