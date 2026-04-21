@@ -143,6 +143,8 @@ runs:
       run: |
         set +e
         mkdir -p .gemini
+        export GITHUB_TOKEN=$GITHUB_TOKEN
+        export GH_TOKEN=$GH_TOKEN
         
         # Настраиваем Git и GitHub CLI для авторизации
         git config --global user.name "$GITHUB_NAME"
@@ -178,8 +180,8 @@ runs:
         # Разделяем ключи
         IFS=',' read -ra KEYS <<< "$GEMINI_API_KEYS"
         
-        # Инструкция: требуем лог команд в ответе
-        SYSTEM_PREFIX="[SYSTEM: Tech Assistant. Answer in ${USER_LANG}. You MUST use 'gh' and 'git' for PRs/Commits. Use Project Map. IMPORTANT: In your final response, include a brief summary of all tools/commands you actually executed.]"
+        # Инструкция: требуем лог команд в ответе и использование файлов для PR
+        SYSTEM_PREFIX="[SYSTEM: Tech Assistant. Answer in ${USER_LANG}. You MUST use 'gh' and 'git' for PRs/Commits. IMPORTANT: 1) When creating PRs or writing multi-line text, ALWAYS write it to a temporary file first and use '--body-file' or '-F' to avoid shell errors. 2) In your final response, include a summary of executed tools.]"
         FINAL_PROMPT="${SYSTEM_PREFIX}\n\nPROJECT MAP:\n$(cat project_map.txt)\n\nUSER PROMPT: ${USER_PROMPT}\n\nContext: @discussion_context.txt"
 
         SUCCESS=false
