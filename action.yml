@@ -21,6 +21,18 @@ inputs:
       You are a helpful technical assistant.
       Analyze the provided discussion context (Original Post and all comments).
       Answer the user's specific question or provide a critique if requested.
+      IF user requests, make any necessary allowed operations with the repository: 
+      - read andwrite code, 
+      - run tests, 
+      - make changes, 
+      - create branches, 
+      - create pull requests,
+      - merge pull requests, 
+      - create issues,
+      - close issues,
+      - asc code reviews,
+      - etc.
+      Report if the user's request cannot be fulfilled.
       Be concise and factual.
   agent_language:
     description: "Language for the response"
@@ -110,6 +122,7 @@ runs:
         echo "DISCUSSION_ID=$DISCUSSION_ID" >> $GITHUB_ENV
 
     - name: Prepare Context and Run Gemini
+      id: run_gemini
       env:
         GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
         USER_PROMPT: ${{ inputs.agent_prompt }}
@@ -117,7 +130,19 @@ runs:
         GEMINI_MODEL: ${{ steps.extract_model.outputs.model }}
       shell: bash
       run: |
+        set +e # Не прерывать выполнение при ошибках команд
+        
+        # Создаем конфигурацию для разрешения инструментов
+        mkdir -p .gemini
+        echo '{"tools": {"core": ["run_shell_command", "write_file", "read_file", "glob", "grep_search"]}}' > .gemini/settings.json
+
         # Форматируем контекст для LLM
+        if ! jq -r '.data.repository.discussion.title' raw_data.json > /dev/null 2>&1; then
+           echo "### ❌ System Error" > raw_answer.md
+           echo "Failed to parse discussion data (raw_data.json is missing or invalid)." >> raw_answer.md
+           exit 0
+        fi
+
         echo "TOPIC: $(jq -r '.data.repository.discussion.title' raw_data.json)" > discussion_context.txt
         echo "OP: $(jq -r '.data.repository.discussion.body' raw_data.json)" >> discussion_context.txt
         echo -e "\n--- CONVERSATION ---" >> discussion_context.txt
@@ -125,13 +150,36 @@ runs:
 
         FULL_PROMPT="Use ${USER_LANG} language for answer. ${USER_PROMPT} Context: @discussion_context.txt"
 
-        gemini -m "$GEMINI_MODEL" -p "$FULL_PROMPT" > raw_answer.md
+        # Запускаем Gemini и перехватываем ошибки
+        if gemini -m "$GEMINI_MODEL" --approval-mode=yolo -p "$FULL_PROMPT" > raw_answer.md 2> error.log; then
+          echo "Gemini executed successfully."
+        else
+          {
+            echo "### ❌ Gemini Agent Error"
+            echo "An error occurred while processing your request. Please check the logs below."
+            echo ""
+            echo "<details><summary>🔍 Click to see technical error log</summary>"
+            echo ""
+            echo "\`\`\`text"
+            cat error.log
+            echo "\`\`\`"
+            echo "</details>"
+          } > raw_answer.md
+          echo "Error log captured and formatted for comment."
+        fi
 
     - name: Post Comment
+      if: always()
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       shell: bash
       run: |
+        # Если файл не был создан по какой-то причине
+        if [ ! -f raw_answer.md ]; then
+          echo "### ❌ Fatal Action Error" > raw_answer.md
+          echo "The agent failed before it could generate a response." >> raw_answer.md
+        fi
+
         printf "%s\n\n" "${{ inputs.comment_title }}" > final_body.md
         cat raw_answer.md >> final_body.md
 
