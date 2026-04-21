@@ -175,13 +175,14 @@ runs:
           KEY_TRIMMED=$(echo $KEY | xargs)
           echo "Attempting with API Key (prefix: ${KEY_TRIMMED:0:4}...)"
           
+          # Запуск Gemini ОДИН РАЗ: ответ в stdout, логи инструментов в stderr
           if GEMINI_API_KEY=$KEY_TRIMMED gemini -m "$GEMINI_MODEL" \
             --approval-mode=yolo \
-            -p "$FINAL_PROMPT" > raw_answer.md 2> error.log; then
+            -p "$FINAL_PROMPT" > raw_answer.md 2> execution.log; then
             SUCCESS=true
             break
           else
-            ERROR_CONTENT=$(cat error.log)
+            ERROR_CONTENT=$(cat execution.log)
             echo "Error: $ERROR_CONTENT"
             if [[ "$ERROR_CONTENT" == *"Quota exceeded"* || "$ERROR_CONTENT" == *"exhausted your daily quota"* ]]; then
               echo "Quota exceeded for current key, trying next..."
@@ -193,19 +194,21 @@ runs:
           fi
         done
 
-        if [ "$SUCCESS" = false ]; then
+        # Добавляем лог выполнения под спойлер (если он есть)
+        if [ -f execution.log ] && [ -s execution.log ]; then
+          echo -e "\n\n<details><summary>🛠 Agent Execution Log (Shell commands & Tools)</summary>\n\n\`\`\`text" >> raw_answer.md
+          cat execution.log >> raw_answer.md
+          echo -e "\`\`\`\n</details>" >> raw_answer.md
+          echo "" >> raw_answer.md
+          echo "🔗 [Открыть логи GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> raw_answer.md
+        fi
+
+        if [ "$SUCCESS" = false ] && [ ! -s raw_answer.md ]; then
           {
             echo "### ❌ Gemini Agent Error"
             echo "All provided API keys failed or hit quota limits."
             echo ""
-            echo "<details><summary>🔍 Last error log</summary>"
-            echo ""
-            echo "\`\`\`text"
-            cat error.log
-            echo "\`\`\`"
-            echo "</details>"
-            echo ""
-            echo "🔗 [Открыть логи GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo "Check the Execution Log below for details."
           } > raw_answer.md
         fi
 
