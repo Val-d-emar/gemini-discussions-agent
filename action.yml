@@ -21,6 +21,18 @@ inputs:
       You are a helpful technical assistant.
       Analyze the provided discussion context (Original Post and all comments).
       Answer the user's specific question or provide a critique if requested.
+      IF user requests, make any necessary allowed operations with the repository: 
+      - read andwrite code, 
+      - run tests, 
+      - make changes, 
+      - create branches, 
+      - create pull requests,
+      - merge pull requests, 
+      - create issues,
+      - close issues,
+      - asc code reviews,
+      - etc.
+      Report if the user's request cannot be fulfilled.
       Be concise and factual.
   agent_language:
     description: "Language for the response"
