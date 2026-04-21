@@ -58,20 +58,21 @@ jobs:
 
 | Parameter          | Description                                     | Required | Default                            |
 | :----------------- | :---------------------------------------------- | :------: | :--------------------------------- |
-| `gemini_api_key` | Your Google Gemini API key.                     |   Yes   | —                                 |
-| `github_token`   | GitHub API token (needed for posting comments). |    No    | `${{ github.token }}`            |
+| `gemini_api_key` | Your Google Gemini API key (supports rotation). |   Yes   | —                                 |
+| `github_token`   | GitHub API token (needs write scopes).          |    No    | `${{ github.token }}`            |
+| `github_email`   | Email for git commits.                          |    No    | `${{ github.actor.email }}`      |
+| `github_name`    | Name for git commits.                           |    No    | `ai-${{ github.actor.login }}`   |
 | `agent_prompt`   | Instructions for the AI agent.                  |    No    | (see action.yml)                   |
 | `agent_language` | The language in which the agent will respond.   |    No    | `English`                        |
 | `agent_model`    | Model for the AI agent (pro, flash, auto, etc.) |    No    | flash                              |
 | `comment_title`  | Header added to the generated response.         |    No    | `### 🤖 Gemini Discussion Agent` |
 
-## 🛠 How It Works
+## 🛠 Features & Capabilities
 
-1. The action is triggered by a new comment in Discussions.
-2. The full history of the current discussion is fetched via the GraphQL API.
-3. Data is formatted into a `discussion_context.txt` file.
-4. Gemini analyzes the context and generates a response based on the provided prompt.
-5. The response is posted as a new comment in the same discussion thread.
+- **Repository Operations:** The agent can read/write code, run tests, create branches, and open Pull Requests using `git` and `gh` CLI.
+- **Project Awareness:** Automatically generates a Project Map to help the agent navigate your codebase efficiently.
+- **Key Rotation:** Supports multiple comma-separated API keys to handle Free Tier limits.
+- **Detailed Logging:** All tool executions and shell commands are logged under a collapsible spoiler in the discussion comment.
 
 ## 📄 License
 
@@ -129,20 +130,21 @@ jobs:
 
 | Параметр   | Описание                                                                 | Обязательно | По умолчанию            |
 | :----------------- | :------------------------------------------------------------------------------- | :--------------------: | :--------------------------------- |
-| `gemini_api_key` | Ваш API ключ для Google Gemini.                                        |          Да          | —                                 |
-| `github_token`   | Токен для доступа к API GitHub (нужен для записи). |         Нет         | `${{ github.token }}`            |
+| `gemini_api_key` | API ключ Gemini (поддерживает ротацию через запятую).                  |          Да          | —                                 |
+| `github_token`   | Токен GitHub (требуются права на запись).                        |         Нет         | `${{ github.token }}`            |
+| `github_email`   | Email для git коммитов.                                          |         Нет         | `${{ github.actor.email }}`      |
+| `github_name`    | Имя для git коммитов.                                           |         Нет         | `ai-${{ github.actor.login }}`   |
 | `agent_prompt`   | Инструкции для ИИ-агента.                                   |         Нет         | (см. action.yml)                 |
 | `agent_language` | Язык, на котором агент будет отвечать.            |         Нет         | `English`                        |
 | `agent_model`    | Модель для использования (pro, flash, auto и т.д.)      |         Нет         | flash                              |
 | `comment_title`  | Заголовок, который будет добавлен к ответу.  |         Нет         | `### 🤖 Gemini Discussion Agent` |
 
-## 🛠 Как это работает
+## 🛠 Возможности
 
-1. Экшен запускается при создании комментария в Discussions.
-2. С помощью GraphQL API выгружается полная история текущего обсуждения.
-3. Данные форматируются в файл `discussion_context.txt`.
-4. Gemini анализирует контекст и генерирует ответ согласно заданному промпту.
-5. Ответ публикуется новым комментарием в ту же ветку обсуждения.
+- **Операции с репозиторием:** Агент может читать/писать код, запускать тесты, создавать ветки и Pull Requests, используя `git` и `gh` CLI.
+- **Понимание проекта:** Автоматическая генерация карты проекта (Project Map) для быстрой навигации по коду.
+- **Ротация ключей:** Поддержка нескольких API ключей для обхода лимитов Free Tier.
+- **Прозрачное логирование:** Все выполненные команды и вызовы инструментов логируются под спойлером в ответе.
 
 ## 📄 Лицензия
 
