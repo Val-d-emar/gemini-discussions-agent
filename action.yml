@@ -25,7 +25,11 @@ inputs:
   agent_language:
     description: "Language for the response"
     required: false
-    default: "Russian"
+    default: "English"
+  agent_model:
+    description: "Model for the AI agent (pro, flash, flash-lite, auto)"
+    required: false
+    default: "flash"
   comment_title:
     description: "Title to prepend to the response"
     required: false
@@ -34,6 +38,12 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Checkout Code
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        token: ${{ inputs.github_token }}
+
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
@@ -48,15 +58,13 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token }}
       shell: bash
       run: |
-        # Используем данные из события (поддерживает и создание топика, и комментарии)
         REPO_OWNER=$(echo "${{ github.repository }}" | cut -d'/' -f1)
         REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+        D_NUM=${{ github.event.discussion.number }}
 
-        # Определяем номер обсуждения
-        if [ "${{ github.event_name }}" == "discussion_comment" ]; then
-          D_NUM=${{ github.event.discussion.number }}
-        else
-          D_NUM=${{ github.event.discussion.number }}
+        if [ -z "$D_NUM" ]; then
+          echo "Error: Discussion number not found in event context."
+          exit 1
         fi
 
         gh api graphql -f query='
@@ -82,14 +90,20 @@ runs:
           }
         }' -f owner="$REPO_OWNER" -f repo="$REPO_NAME" -F num=$D_NUM > raw_data.json
 
-        # Извлекаем ID для ответа
-        echo "DISCUSSION_ID=$(jq -r '.data.repository.discussion.id' raw_data.json)" >> $GITHUB_ENV
+        DISCUSSION_ID=$(jq -r '.data.repository.discussion.id // empty' raw_data.json)
+        if [ -z "$DISCUSSION_ID" ]; then
+          echo "Error: Could not fetch discussion data."
+          cat raw_data.json
+          exit 1
+        fi
+        echo "DISCUSSION_ID=$DISCUSSION_ID" >> $GITHUB_ENV
 
     - name: Prepare Context and Run Gemini
       env:
         GEMINI_API_KEY: ${{ inputs.gemini_api_key }}
         USER_PROMPT: ${{ inputs.agent_prompt }}
         USER_LANG: ${{ inputs.agent_language }}
+        GEMINI_MODEL: ${{ inputs.agent_model }}
       shell: bash
       run: |
         # Форматируем контекст для LLM
@@ -98,9 +112,9 @@ runs:
         echo -e "\n--- CONVERSATION ---" >> discussion_context.txt
         jq -r '.data.repository.discussion.comments.nodes[] | "USER \(.author.login): \(.body) " + ([.replies.nodes[] | "REPLY \(.author.login): \(.body)"] | join(" "))' raw_data.json >> discussion_context.txt
 
-        FULL_PROMPT="Use ${USER_LANG} language for answer. ${USER_PROMPT}"
+        FULL_PROMPT="Use ${USER_LANG} language for answer. ${USER_PROMPT} Context: @discussion_context.txt"
 
-        gemini prompt "$FULL_PROMPT" discussion_context.txt > raw_answer.md
+        gemini -m "$GEMINI_MODEL" -p "$FULL_PROMPT" > raw_answer.md
 
     - name: Post Comment
       env:
@@ -110,10 +124,9 @@ runs:
         printf "%s\n\n" "${{ inputs.comment_title }}" > final_body.md
         cat raw_answer.md >> final_body.md
 
-        # Отправка через GraphQL (обязательно для Discussions)
         gh api graphql -f query='
         mutation($id: ID!, $body: String!) {
           addDiscussionComment(input: {discussionId: $id, body: $body}) {
             comment { url }
           }
-        }' -f id="${{ env.DISCUSSION_ID }}" -f body="$(cat final_body.md)"
+        }' -f id="${{ env.DISCUSSION_ID }}" -F body=@final_body.md
