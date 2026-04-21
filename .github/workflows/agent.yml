@@ -19,4 +19,4 @@ jobs:
           github_token: ${{ secrets.AI_TOKEN_PAT }}
           agent_prompt: "Проанализируй текущий вопрос пользователя в контексте всего обсуждения и дай аргументированный ответ."
           agent_language: "Russian"
-          agent_model: ${{ steps.extract_model.outputs.model }}
+          agent_model: "flash"
