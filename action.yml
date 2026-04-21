@@ -147,11 +147,13 @@ runs:
         # Настраиваем Git и GitHub CLI для авторизации
         git config --global user.name "$GITHUB_NAME"
         git config --global user.email "$GITHUB_EMAIL"
-        # git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
         
         # Настройка gh CLI (использует GH_TOKEN из env)
         if command -v gh >/dev/null 2>&1; then
+          echo "$GH_TOKEN" | gh auth login --with-token
           gh auth setup-git
+          gh config set prompt disabled
         fi
 
         # Включаем инструменты
@@ -176,8 +178,8 @@ runs:
         # Разделяем ключи
         IFS=',' read -ra KEYS <<< "$GEMINI_API_KEYS"
         
-        # Инструкция: разрешаем использование gh CLI
-        SYSTEM_PREFIX="[SYSTEM: Tech Assistant. Answer in ${USER_LANG}. You CAN use 'gh' CLI for PRs, Issues and 'git' for commits/pushes. Use Project Map. Minimize turns.]"
+        # Инструкция: требуем лог команд в ответе
+        SYSTEM_PREFIX="[SYSTEM: Tech Assistant. Answer in ${USER_LANG}. You MUST use 'gh' and 'git' for PRs/Commits. Use Project Map. IMPORTANT: In your final response, include a brief summary of all tools/commands you actually executed.]"
         FINAL_PROMPT="${SYSTEM_PREFIX}\n\nPROJECT MAP:\n$(cat project_map.txt)\n\nUSER PROMPT: ${USER_PROMPT}\n\nContext: @discussion_context.txt"
 
         SUCCESS=false
@@ -185,10 +187,10 @@ runs:
           KEY_TRIMMED=$(echo $KEY | xargs)
           echo "Attempting with API Key (prefix: ${KEY_TRIMMED:0:4}...)"
           
-          # Запуск Gemini ОДИН РАЗ: ответ в stdout, логи инструментов в stderr
+          # Запуск Gemini: фильтруем мусор из stderr на лету
           if GEMINI_API_KEY=$KEY_TRIMMED gemini -m "$GEMINI_MODEL" \
             --approval-mode=yolo \
-            -p "$FINAL_PROMPT" > raw_answer.md 2> execution.log; then
+            -p "$FINAL_PROMPT" > raw_answer.md 2> >(grep -vE "STARTUP|Phase|measure|metrics" > execution.log); then
             SUCCESS=true
             break
           else
@@ -206,7 +208,7 @@ runs:
 
         # Добавляем лог выполнения под спойлер (если он есть)
         if [ -f execution.log ] && [ -s execution.log ]; then
-          echo -e "\n\n<details><summary>🛠 Agent Execution Log (Shell commands & Tools)</summary>\n\n\`\`\`text" >> raw_answer.md
+          echo -e "\n\n<details><summary>🛠 Agent Execution Log (Tool Calls)</summary>\n\n\`\`\`text" >> raw_answer.md
           cat execution.log >> raw_answer.md
           echo -e "\`\`\`\n</details>" >> raw_answer.md
           echo "" >> raw_answer.md
